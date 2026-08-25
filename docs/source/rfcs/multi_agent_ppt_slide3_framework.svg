@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#059669"/>
+    </marker>
+    <marker id="arrV" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c3aed"/>
+    </marker>
+    <filter id="sh"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.10"/></filter>
+    <style>
+      .t1{font:700 28px Arial,sans-serif;fill:#ffffff}
+      .t2{font:400 14px Arial,sans-serif;fill:#cbd5e1}
+      .sectionTitle{font:700 20px Arial,sans-serif;fill:#0f172a}
+      .boxTitle{font:700 15px Arial,sans-serif;fill:#0f172a}
+      .boxText{font:400 12px Arial,sans-serif;fill:#475569}
+      .boxCode{font:400 11px monospace,sans-serif;fill:#334155}
+      .stepNum{font:700 20px Arial,sans-serif;fill:#ffffff}
+      .stepLabel{font:700 14px Arial,sans-serif;fill:#1e293b}
+      .note{font:400 12px Arial,sans-serif;fill:#64748b}
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1280" height="720" fill="#f8fafc"/>
+
+  <!-- 标题栏 -->
+  <rect x="0" y="0" width="1280" height="64" fill="#059669"/>
+  <text x="40" y="42" class="t1">执行框架层 — MultiAgentFramework</text>
+  <text x="500" y="42" class="t2">实现 AgentFramework.generate_sequences contract · 协调 rollout → runner → reward → batch</text>
+
+  <!-- ======== 左侧：组件详情 ======== -->
+  <rect x="30" y="85" width="660" height="315" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="55" y="115" class="sectionTitle">四大组件</text>
+
+  <!-- Grouped Rollout Expansion -->
+  <rect x="55" y="135" width="600" height="55" rx="6" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="1"/>
+  <text x="75" y="158" class="boxTitle">① Grouped Rollout Expansion</text>
+  <text x="75" y="178" class="boxText">接收来自 MultiAgentsPPOTrainer 的 prompts → 每个 uid 展开为 rollout.n 个独立 multi-agent rollout 样本（如 n=8）</text>
+
+  <!-- MultiAgentRunner -->
+  <rect x="55" y="203" width="600" height="80" rx="6" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="1"/>
+  <text x="75" y="226" class="boxTitle">② MultiAgentRunner</text>
+  <text x="75" y="246" class="boxText">加载 MAS config → 注入 rollout-scoped gateway base_url + role model names</text>
+  <text x="75" y="264" class="boxText">启动外部 MAS（支持 in-process / Ray worker / sandbox / sidecar）→ 返回 final_result</text>
+  <text x="75" y="280" class="boxText" fill="#7c3aed">不 finalize role sessions —— 整个 rollout 完成后再 finalize</text>
+
+  <!-- Trajectory & Reward Pipeline -->
+  <rect x="55" y="296" width="600" height="55" rx="6" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="1"/>
+  <text x="75" y="319" class="boxTitle">③ Trajectory &amp; Reward Pipeline</text>
+  <text x="75" y="339" class="boxText">收集 MultiAgentRolloutResult → RewardWorker 计算 scalar reward → 附加 reward + group metadata 到每个可训练 trajectory</text>
+
+  <!-- MultiPolicyBatchBuilder -->
+  <rect x="55" y="340" width="600" height="45" rx="6" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="1"/>
+  <text x="75" y="362" class="boxTitle">④ MultiPolicyBatchBuilder → 输出 policy_name → DataProto</text>
+
+  <!-- ======== 右侧：生命周期流程 ======== -->
+  <rect x="710" y="85" width="540" height="315" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="735" y="115" class="sectionTitle">Multi-Agent Rollout 生命周期</text>
+  <text x="735" y="138" class="note">与 OpenAICompatibleAgentFramework 对齐，但泛化为多 role</text>
+
+  <!-- 流程步骤 -->
+  <rect x="735" y="158" width="490" height="32" rx="6" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"/>
+  <circle cx="758" cy="174" r="12" fill="#2563eb"/>
+  <text x="758" y="179" text-anchor="middle" class="stepNum" font-size="14">1</text>
+  <text x="780" y="179" class="boxText">uid → rollout.n 个独立 multi-agent rollout</text>
+
+  <line x1="980" y1="190" x2="980" y2="198" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="735" y="200" width="490" height="32" rx="6" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"/>
+  <circle cx="758" cy="216" r="12" fill="#2563eb"/>
+  <text x="758" y="221" text-anchor="middle" class="stepNum" font-size="14">2</text>
+  <text x="780" y="221" class="boxText">为每个 rollout 创建 rollout-scoped gateway base_url + role sessions</text>
+
+  <line x1="980" y1="232" x2="980" y2="240" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="735" y="242" width="490" height="32" rx="6" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"/>
+  <circle cx="758" cy="258" r="12" fill="#2563eb"/>
+  <text x="758" y="263" text-anchor="middle" class="stepNum" font-size="14">3</text>
+  <text x="780" y="263" class="boxText">MultiAgentRunner 启动外部 MAS</text>
+
+  <line x1="980" y1="274" x2="980" y2="282" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="735" y="284" width="490" height="32" rx="6" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1"/>
+  <circle cx="758" cy="300" r="12" fill="#7c3aed"/>
+  <text x="758" y="305" text-anchor="middle" class="stepNum" font-size="14">4</text>
+  <text x="780" y="305" class="boxText">MAS 反复调用 gateway（model=&lt;role&gt;）· Role sessions 保持 ACTIVE</text>
+
+  <line x1="980" y1="316" x2="980" y2="324" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="735" y="326" width="490" height="32" rx="6" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"/>
+  <circle cx="758" cy="342" r="12" fill="#2563eb"/>
+  <text x="758" y="347" text-anchor="middle" class="stepNum" font-size="14">5</text>
+  <text x="780" y="347" class="boxText">rollout 完成后 finalize_multi_agent_rollout(rollout_id)</text>
+
+  <line x1="980" y1="358" x2="980" y2="366" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="735" y="370" width="490" height="20" rx="4" fill="#fefce8" stroke="#fcd34d" stroke-width="1"/>
+  <text x="758" y="384" class="boxText">reward → batch building → 返回 policy_name → DataProto</text>
+
+  <!-- ======== 下半部分：Runner 详解 ======== -->
+  <rect x="30" y="420" width="1220" height="285" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="55" y="450" class="sectionTitle">MultiAgentRunner — 外部 MAS 启动器</text>
+
+  <rect x="55" y="470" width="380" height="95" rx="8" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="1.5"/>
+  <text x="75" y="495" class="boxTitle">Runner 职责</text>
+  <text x="75" y="515" class="boxText">① 加载 MAS config（定义 agent roles、tools、prompts）</text>
+  <text x="75" y="533" class="boxText">② 注入 rollout-scoped gateway base_url（所有 agent 共用）</text>
+  <text x="75" y="551" class="boxText">③ model name = role name（model=&lt;role&gt; 选择 session）</text>
+
+  <rect x="460" y="470" width="380" height="95" rx="8" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="1.5"/>
+  <text x="480" y="495" class="boxTitle">MAS Config 示例</text>
+  <text x="480" y="515" class="boxCode">agents:</text>
+  <text x="480" y="533" class="boxCode">  agent_1:  # orchestrator</text>
+  <text x="480" y="551" class="boxCode">  agent_2:  # executor/coder</text>
+  <text x="680" y="551" class="boxCode">  agent_3:  # reviewer</text>
+
+  <rect x="865" y="470" width="365" height="95" rx="8" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="1.5"/>
+  <text x="885" y="495" class="boxTitle">支持的 Execution Mode</text>
+  <text x="885" y="515" class="boxText">• in-process — 同进程执行</text>
+  <text x="885" y="533" class="boxText">• Ray worker — 独立 Ray actor</text>
+  <text x="885" y="551" class="boxText">• sandbox / sidecar / subprocess</text>
+
+  <!-- 底部关键设计标注 -->
+  <rect x="55" y="590" width="1170" height="100" rx="8" fill="#fefce8" stroke="#fcd34d" stroke-width="1.2"/>
+  <text x="80" y="618" class="boxTitle">关键设计决策</text>
+
+  <text x="80" y="642" class="boxText">🔹 Role invocation ≠ Gateway session boundary —— 同一次 rollout 中同一 agent 可被多次调用，role session 在 invocations 之间保持 ACTIVE</text>
+  <text x="80" y="662" class="boxText">🔹 整个 multi-agent rollout 完成后才 finalize —— 外部 MAS 完成所有 agent 交互 → 框架执行 rollout-level finalization → 一次性收集所有 role-session trajectories</text>
+  <text x="80" y="682" class="boxText">🔹 Hierarchical two-loop MAS 支持 —— orchestrator 持有外层 loop，worker agents 持有内层 ReAct loop，各自维护私有 message history</text>
+
+</svg>

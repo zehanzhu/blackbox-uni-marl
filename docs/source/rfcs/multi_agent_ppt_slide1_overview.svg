@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    </marker>
+    <filter id="sh"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.10"/></filter>
+    <filter id="sh2"><feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.15"/></filter>
+    <style>
+      .t1{font:700 28px Arial,sans-serif;fill:#ffffff}
+      .t2{font:400 14px Arial,sans-serif;fill:#cbd5e1}
+      .phaseNum{font:700 16px Arial,sans-serif;fill:#ffffff}
+      .phaseTitle{font:700 18px Arial,sans-serif;fill:#0f172a}
+      .phaseDesc{font:400 13px Arial,sans-serif;fill:#475569}
+      .boxTitle{font:700 15px Arial,sans-serif;fill:#0f172a}
+      .boxText{font:400 12px Arial,sans-serif;fill:#475569}
+      .stepNum{font:700 22px Arial,sans-serif;fill:#ffffff}
+      .stepLabel{font:700 14px Arial,sans-serif;fill:#1e293b}
+      .arrowLabel{font:400 11px Arial,sans-serif;fill:#64748b}
+    </style>
+  </defs>
+
+  <!-- 背景 -->
+  <rect x="0" y="0" width="1280" height="720" fill="#f1f5f9"/>
+
+  <!-- 顶部标题栏 -->
+  <rect x="0" y="0" width="1280" height="64" fill="#1e293b"/>
+  <text x="40" y="42" class="t1">Uni-Agent 多智能体黑盒训练 — 架构总览</text>
+  <text x="560" y="42" class="t2">端到端训练流程：从 Prompt 到 Per-Policy PPO Update</text>
+
+  <!-- ======== 四大阶段 ======== -->
+
+  <!-- Phase 1: 训练编排 -->
+  <rect x="40" y="90" width="270" height="270" rx="12" fill="#ffffff" stroke="#2563eb" stroke-width="2" filter="url(#sh)"/>
+  <rect x="40" y="90" width="270" height="44" rx="12" fill="#2563eb"/>
+  <rect x="40" y="118" width="270" height="16" fill="#2563eb"/>
+  <text x="56" y="118" class="phaseNum">Phase 1</text>
+  <text x="135" y="118" class="t1" font-size="16">训练编排</text>
+
+  <rect x="58" y="150" width="234" height="60" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"/>
+  <text x="175" y="174" text-anchor="middle" class="boxTitle">MultiAgentsPPOTrainer</text>
+  <text x="175" y="194" text-anchor="middle" class="boxText">Policy Registry · Advantage · Dispatch</text>
+
+  <rect x="58" y="225" width="234" height="55" rx="6" fill="#fefce8" stroke="#fcd34d" stroke-width="1"/>
+  <text x="175" y="248" text-anchor="middle" class="boxTitle">Per-Policy RayPPOTrainers</text>
+  <text x="175" y="268" text-anchor="middle" class="boxText">独立 resource pool · 独立 checkpoint</text>
+
+  <!-- 箭头 1→2 -->
+  <line x1="310" y1="225" x2="370" y2="225" stroke="#334155" stroke-width="2.5" marker-end="url(#arr)"/>
+  <circle cx="340" cy="225" r="16" fill="#2563eb"/>
+  <text x="340" y="231" text-anchor="middle" class="stepNum" font-size="18">①</text>
+  <text x="335" y="210" text-anchor="middle" class="arrowLabel">generate_sequences</text>
+
+  <!-- Phase 2: 执行框架 -->
+  <rect x="380" y="90" width="350" height="270" rx="12" fill="#ffffff" stroke="#059669" stroke-width="2" filter="url(#sh)"/>
+  <rect x="380" y="90" width="350" height="44" rx="12" fill="#059669"/>
+  <rect x="380" y="118" width="350" height="16" fill="#059669"/>
+  <text x="396" y="118" class="phaseNum">Phase 2</text>
+  <text x="480" y="118" class="t1" font-size="16">执行框架</text>
+
+  <rect x="398" y="150" width="314" height="55" rx="8" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="1"/>
+  <text x="555" y="173" text-anchor="middle" class="boxTitle">MultiAgentFramework</text>
+  <text x="555" y="193" text-anchor="middle" class="boxText">实现 AgentFramework.generate_sequences</text>
+
+  <rect x="398" y="220" width="150" height="65" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="473" y="245" text-anchor="middle" class="boxTitle">Rollout</text>
+  <text x="473" y="265" text-anchor="middle" class="boxText">uid → N samples</text>
+
+  <rect x="562" y="220" width="150" height="65" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="637" y="245" text-anchor="middle" class="boxTitle">Runner</text>
+  <text x="637" y="265" text-anchor="middle" class="boxText">启动外部 MAS</text>
+
+  <!-- 箭头 2→3 -->
+  <line x1="730" y1="225" x2="790" y2="225" stroke="#334155" stroke-width="2.5" marker-end="url(#arr)"/>
+  <circle cx="760" cy="225" r="16" fill="#059669"/>
+  <text x="760" y="231" text-anchor="middle" class="stepNum" font-size="18">②</text>
+  <text x="755" y="210" text-anchor="middle" class="arrowLabel">create rollout</text>
+
+  <!-- Phase 3: 服务运行时 -->
+  <rect x="800" y="90" width="270" height="270" rx="12" fill="#ffffff" stroke="#d97706" stroke-width="2" filter="url(#sh)"/>
+  <rect x="800" y="90" width="270" height="44" rx="12" fill="#d97706"/>
+  <rect x="800" y="118" width="270" height="16" fill="#d97706"/>
+  <text x="816" y="118" class="phaseNum">Phase 3</text>
+  <text x="900" y="118" class="t1" font-size="16">服务运行时</text>
+
+  <rect x="818" y="150" width="234" height="55" rx="8" fill="#fffbeb" stroke="#fcd34d" stroke-width="1"/>
+  <text x="935" y="173" text-anchor="middle" class="boxTitle">RoleAwareGateway</text>
+  <text x="935" y="193" text-anchor="middle" class="boxText">model=&lt;role&gt; → policy → backend</text>
+
+  <rect x="818" y="220" width="234" height="55" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="935" y="243" text-anchor="middle" class="boxTitle">RolloutBackend</text>
+  <text x="935" y="263" text-anchor="middle" class="boxText">生成 token ids + logprobs</text>
+
+  <!-- Phase 4: 外部 MAS -->
+  <rect x="1100" y="90" width="150" height="270" rx="12" fill="#ffffff" stroke="#7c3aed" stroke-width="2" filter="url(#sh)"/>
+  <rect x="1100" y="90" width="150" height="44" rx="12" fill="#7c3aed"/>
+  <rect x="1100" y="118" width="150" height="16" fill="#7c3aed"/>
+  <text x="1125" y="118" text-anchor="middle" class="t1" font-size="16">External MAS</text>
+
+  <rect x="1115" y="165" width="120" height="70" rx="6" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1"/>
+  <text x="1175" y="193" text-anchor="middle" class="boxTitle">agent_1</text>
+  <text x="1175" y="213" text-anchor="middle" class="boxText">ReAct loop</text>
+
+  <rect x="1115" y="245" width="120" height="50" rx="6" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1"/>
+  <text x="1175" y="268" text-anchor="middle" class="boxTitle">agent_2</text>
+  <text x="1175" y="285" text-anchor="middle" class="boxText">ReAct loop</text>
+
+  <!-- MAS ↔ Gateway 双向箭头 -->
+  <path d="M 1100 200 L 1070 200" stroke="#7c3aed" stroke-width="2.5" marker-end="url(#arr)"/>
+  <path d="M 1070 260 L 1100 260" stroke="#7c3aed" stroke-width="2.5" marker-end="url(#arr)"/>
+  <circle cx="1085" cy="230" r="14" fill="#7c3aed"/>
+  <text x="1085" y="235" text-anchor="middle" class="stepNum" font-size="16">③</text>
+  <text x="1080" y="305" text-anchor="middle" class="arrowLabel">chat.completions</text>
+  <text x="1080" y="320" text-anchor="middle" class="arrowLabel">model=&lt;role&gt;</text>
+
+  <!-- ======== 底部反馈回路 ======== -->
+
+  <!-- 返回箭头：Gateway → Framework -->
+  <path d="M 935 275 L 935 380 L 300 380 L 300 330" stroke="#059669" stroke-width="2.5" fill="none" marker-end="url(#arr)" stroke-dasharray="8 4"/>
+  <circle cx="620" cy="380" r="16" fill="#059669"/>
+  <text x="620" y="386" text-anchor="middle" class="stepNum" font-size="18">④</text>
+  <text x="620" y="370" text-anchor="middle" class="arrowLabel">finalize → MultiAgentRolloutResult</text>
+
+  <!-- 底部处理栏 -->
+  <rect x="40" y="430" width="1210" height="80" rx="12" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="70" y="460" class="phaseTitle">Phase 4: 奖励 &amp; 批次构建</text>
+  <text x="70" y="485" class="phaseDesc">Trajectory &amp; Reward Pipeline — RewardWorker 计算 rollout reward → 附加 reward + group metadata</text>
+  <text x="70" y="503" class="phaseDesc">MultiPolicyBatchBuilder — 按 policy_name 分组 → 输出 policy_name → DataProto</text>
+
+  <!-- 底部到顶部的回路箭头 -->
+  <path d="M 300 510 L 300 560 L 175 560 L 175 280" stroke="#2563eb" stroke-width="2.5" fill="none" marker-end="url(#arr)"/>
+  <circle cx="175" cy="560" r="16" fill="#2563eb"/>
+  <text x="175" y="566" text-anchor="middle" class="stepNum" font-size="18">⑤</text>
+  <text x="150" y="540" text-anchor="middle" class="arrowLabel">per-policy</text>
+  <text x="150" y="555" text-anchor="middle" class="arrowLabel">DataProto</text>
+
+  <rect x="40" y="585" width="1210" height="100" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="70" y="615" class="phaseTitle">Phase 5: Per-Policy PPO Update</text>
+  <text x="70" y="640" class="phaseDesc">① 基于 uid group 的 reward table 计算 rollout_id → advantage（GRPO）</text>
+  <text x="70" y="660" class="phaseDesc">② 分发 advantage-annotated DataProto → RayPPOTrainer(policy_i) → ray_resource_pool_i</text>
+  <text x="70" y="680" class="phaseDesc">③ 每个 policy 独立 PPO update · 无 batch 的 policy 跳过 · 独立 checkpoint</text>
+
+</svg>

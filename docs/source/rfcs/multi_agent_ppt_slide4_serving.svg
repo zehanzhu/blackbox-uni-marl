@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#d97706"/>
+    </marker>
+    <marker id="arrV" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrBack" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+    <filter id="sh"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.10"/></filter>
+    <style>
+      .t1{font:700 28px Arial,sans-serif;fill:#ffffff}
+      .t2{font:400 14px Arial,sans-serif;fill:#fde68a}
+      .sectionTitle{font:700 20px Arial,sans-serif;fill:#0f172a}
+      .boxTitle{font:700 15px Arial,sans-serif;fill:#0f172a}
+      .boxText{font:400 12px Arial,sans-serif;fill:#475569}
+      .boxCode{font:400 11px monospace,sans-serif;fill:#334155}
+      .stepNum{font:700 20px Arial,sans-serif;fill:#ffffff}
+      .stepLabel{font:700 13px Arial,sans-serif;fill:#1e293b}
+      .note{font:400 12px Arial,sans-serif;fill:#64748b}
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1280" height="720" fill="#f8fafc"/>
+
+  <!-- 标题栏 -->
+  <rect x="0" y="0" width="1280" height="64" fill="#d97706"/>
+  <text x="40" y="42" class="t1">服务运行时层 — Gateway + Rollout Backend</text>
+  <text x="550" y="42" class="t2">接收外部 MAS 的 OpenAI-compatible 请求 · role-aware 路由 · token-level trajectory 记录</text>
+
+  <!-- ======== 上半部分：请求处理流程 ======== -->
+  <rect x="30" y="85" width="1220" height="310" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="55" y="115" class="sectionTitle">Role-Aware Request 处理链</text>
+
+  <!-- External MAS (source) -->
+  <rect x="55" y="140" width="170" height="100" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2.5" filter="url(#sh)"/>
+  <text x="140" y="175" text-anchor="middle" class="boxTitle">External MAS</text>
+  <text x="140" y="195" text-anchor="middle" class="boxText">独立应用</text>
+  <text x="140" y="212" text-anchor="middle" class="boxText">agent_1, agent_2, …</text>
+  <text x="140" y="229" text-anchor="middle" class="boxText">所有 agent 同 base_url</text>
+
+  <!-- Arrow ① -->
+  <line x1="225" y1="190" x2="275" y2="190" stroke="#7c3aed" stroke-width="2.5" marker-end="url(#arrV)"/>
+  <circle cx="250" cy="190" r="14" fill="#7c3aed"/>
+  <text x="250" y="196" text-anchor="middle" class="stepNum" font-size="16">①</text>
+  <text x="255" y="175" class="stepLabel" fill="#7c3aed">POST /chat/completions</text>
+  <text x="255" y="210" class="note">model=&lt;role&gt;</text>
+
+  <!-- GatewayManager -->
+  <rect x="290" y="140" width="200" height="100" rx="8" fill="#fffbeb" stroke="#fcd34d" stroke-width="2" filter="url(#sh)"/>
+  <text x="390" y="170" text-anchor="middle" class="boxTitle">GatewayManager</text>
+  <line x1="305" y1="182" x2="475" y2="182" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="390" y="200" text-anchor="middle" class="boxText">rollout-level</text>
+  <text x="390" y="218" text-anchor="middle" class="boxText">actor affinity</text>
+  <text x="390" y="236" text-anchor="middle" class="boxText">跨 gateway_count 分配</text>
+
+  <!-- Arrow ② -->
+  <line x1="490" y1="190" x2="540" y2="190" stroke="#d97706" stroke-width="2.5" marker-end="url(#arr)"/>
+  <circle cx="515" cy="190" r="14" fill="#d97706"/>
+  <text x="515" y="196" text-anchor="middle" class="stepNum" font-size="16">②</text>
+  <text x="520" y="175" class="stepLabel" fill="#d97706">route to owning</text>
+  <text x="520" y="210" class="stepLabel" fill="#d97706">GatewayActor</text>
+
+  <!-- RoleAwareGateway Actor -->
+  <rect x="555" y="135" width="340" height="175" rx="8" fill="#fffbeb" stroke="#d97706" stroke-width="2.5" filter="url(#sh)"/>
+  <text x="725" y="162" text-anchor="middle" class="boxTitle">RoleAwareGateway Actor</text>
+  <line x1="570" y1="175" x2="880" y2="175" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="725" y="195" text-anchor="middle" class="boxText">③ 从 request model 提取 role → 在 rollout manifest 中选 role session</text>
+  <text x="725" y="215" text-anchor="middle" class="boxText">④ resolve role → policy_name → rollout backend</text>
+  <text x="725" y="235" text-anchor="middle" class="boxText">⑤ 使用 policy tokenizer 渲染 prompt（full/incremental encoding）</text>
+  <text x="725" y="255" text-anchor="middle" class="boxText">⑥ 记录 Trajectory: prompt_ids · response_ids · logprobs · mask</text>
+  <text x="725" y="275" text-anchor="middle" class="boxText">⑦ 持有 Rollout Session Group Manifest</text>
+  <text x="725" y="298" text-anchor="middle" class="boxText" fill="#7c3aed">Role session 在多次 invocation 之间保持 ACTIVE</text>
+
+  <!-- Arrow ⑧ -->
+  <line x1="895" y1="220" x2="945" y2="220" stroke="#d97706" stroke-width="2.5" marker-end="url(#arr)"/>
+  <circle cx="920" cy="220" r="14" fill="#d97706"/>
+  <text x="920" y="226" text-anchor="middle" class="stepNum" font-size="16">⑧</text>
+  <text x="920" y="205" class="stepLabel" fill="#d97706">route generation</text>
+
+  <!-- RoleAwareRolloutBackend -->
+  <rect x="960" y="140" width="260" height="100" rx="8" fill="#fffbeb" stroke="#fcd34d" stroke-width="2" filter="url(#sh)"/>
+  <text x="1090" y="170" text-anchor="middle" class="boxTitle">RoleAwareRolloutBackend</text>
+  <line x1="975" y1="182" x2="1205" y2="182" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="1090" y="200" text-anchor="middle" class="boxText">policy → served model endpoint</text>
+  <text x="1090" y="218" text-anchor="middle" class="boxText">返回: token ids + logprobs</text>
+  <text x="1090" y="236" text-anchor="middle" class="boxText">拒绝不支持参数（n>1）</text>
+
+  <!-- Return arrow -->
+  <path d="M 1090 240 L 1090 260 L 555 260" stroke="#64748b" stroke-width="1.8" fill="none" stroke-dasharray="6 3" marker-end="url(#arrBack)"/>
+  <text x="680" y="255" class="note">OpenAI-compatible response 返回给 MAS</text>
+
+  <!-- ======== 下半部分：关键概念 ======== -->
+  <rect x="30" y="415" width="610" height="290" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="55" y="445" class="sectionTitle">Rollout Session Group Manifest</text>
+  <text x="55" y="468" class="note">组织同一个 multi-agent rollout 内所有 role sessions 的索引结构</text>
+
+  <!-- Manifest 示意 -->
+  <rect x="55" y="485" width="560" height="200" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <text x="75" y="510" class="boxCode" fill="#93c5fd">MultiAgentRolloutState</text>
+  <text x="75" y="530" class="boxCode" fill="#f8fafc">  rollout_id: "rollout_abc123"</text>
+  <text x="75" y="550" class="boxCode" fill="#f8fafc">  sample_idx: 0</text>
+  <text x="75" y="570" class="boxCode" fill="#f8fafc">  uid: "task_001"</text>
+  <text x="75" y="595" class="boxCode" fill="#86efac">  role_sessions:</text>
+  <text x="75" y="615" class="boxCode" fill="#f8fafc">    agent_1: {session_id, policy_name: "policy_1"}</text>
+  <text x="75" y="635" class="boxCode" fill="#f8fafc">    agent_2: {session_id, policy_name: "policy_1"}</text>
+  <text x="75" y="655" class="boxCode" fill="#f8fafc">    agent_3: {session_id, policy_name: "policy_2"}</text>
+  <text x="75" y="675" class="boxCode" fill="#fcd34d">  metadata: {parent_child_links, invocation_records}</text>
+
+  <!-- ======== 右侧：Trajectory 结构 ======== -->
+  <rect x="660" y="415" width="590" height="290" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="685" y="445" class="sectionTitle">Uni-Agent Trajectory 字段</text>
+  <text x="685" y="468" class="note">复用现有 format，附加 role/policy/rollout metadata</text>
+
+  <rect x="685" y="488" width="540" height="55" rx="6" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="705" y="510" class="boxTitle">Core Fields（Exact Match）</text>
+  <text x="705" y="530" class="boxCode">prompt_ids · response_ids · response_mask · response_logprobs · multi_modal_data · routed_experts · extra_fields</text>
+
+  <rect x="685" y="553" width="540" height="45" rx="6" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="1"/>
+  <text x="705" y="573" class="boxTitle">Role/Policy Metadata（在 extra_fields / rollout result 中）</text>
+  <text x="705" y="592" class="boxCode">rollout_id · uid · sample_idx · session_id · role · policy · parent_session_id · invocation_id</text>
+
+  <rect x="685" y="610" width="540" height="55" rx="6" fill="#fefce8" stroke="#fcd34d" stroke-width="1"/>
+  <text x="705" y="632" class="boxTitle">Incremental Encoding 保留</text>
+  <text x="705" y="650" class="boxText">首个 request → full encoding · 后续追加 → incremental encoding（仅编码新增 messages）</text>
+  <text x="705" y="665" class="boxText">response_mask=1（可训练） · response_mask=0（context/tool results，不可训练）</text>
+
+  <text x="685" y="695" class="boxTitle" fill="#7c3aed">重要：一次 role invocation ≠ trajectory finalization 边界</text>
+
+</svg>

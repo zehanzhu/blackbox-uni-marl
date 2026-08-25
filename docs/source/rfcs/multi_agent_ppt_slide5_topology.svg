@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <filter id="sh"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.10"/></filter>
+    <filter id="sh2"><feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.15"/></filter>
+    <style>
+      .t1{font:700 28px Arial,sans-serif;fill:#ffffff}
+      .t2{font:400 14px Arial,sans-serif;fill:#cbd5e1}
+      .sectionTitle{font:700 20px Arial,sans-serif;fill:#0f172a}
+      .boxTitle{font:700 15px Arial,sans-serif;fill:#0f172a}
+      .boxText{font:400 12px Arial,sans-serif;fill:#475569}
+      .boxCode{font:400 12px monospace,sans-serif;fill:#334155}
+      .note{font:400 12px Arial,sans-serif;fill:#64748b}
+      .layerLabel{font:700 14px Arial,sans-serif;fill:#64748b}
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1280" height="720" fill="#f8fafc"/>
+
+  <!-- 标题栏 -->
+  <rect x="0" y="0" width="1280" height="64" fill="#1e293b"/>
+  <text x="40" y="42" class="t1">Role → Policy → Trainer 拓扑映射</text>
+  <text x="520" y="42" class="t2">四层身份：Role · Policy · Trainer · Resource Pool · 支持灵活映射策略</text>
+
+  <!-- ======== 左侧大图：完整拓扑（3 roles → 2 policies） ======== -->
+  <rect x="30" y="85" width="820" height="620" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="55" y="115" class="sectionTitle">示例：Mixed Mapping（3 roles → 2 policies）</text>
+
+  <!-- === Layer 1: Roles === -->
+  <text x="55" y="150" class="layerLabel">Layer 1: MAS Roles（外部 agent 身份）</text>
+
+  <rect x="80" y="170" width="180" height="70" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2.5" filter="url(#sh2)"/>
+  <text x="170" y="200" text-anchor="middle" class="boxTitle">Role: agent_1</text>
+  <text x="170" y="220" text-anchor="middle" class="boxText">Orchestrator</text>
+  <text x="170" y="235" text-anchor="middle" class="boxText">外层 loop · 全局状态</text>
+
+  <rect x="320" y="170" width="180" height="70" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2.5" filter="url(#sh2)"/>
+  <text x="410" y="200" text-anchor="middle" class="boxTitle">Role: agent_2</text>
+  <text x="410" y="220" text-anchor="middle" class="boxText">Executor/Coder</text>
+  <text x="410" y="235" text-anchor="middle" class="boxText">内层 ReAct loop</text>
+
+  <rect x="560" y="170" width="180" height="70" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="2.5" filter="url(#sh2)"/>
+  <text x="650" y="200" text-anchor="middle" class="boxTitle">Role: agent_3</text>
+  <text x="650" y="220" text-anchor="middle" class="boxText">Reviewer</text>
+  <text x="650" y="235" text-anchor="middle" class="boxText">内层 ReAct loop</text>
+
+  <!-- Mapping arrows -->
+  <text x="55" y="275" class="layerLabel">role_policy_mapping</text>
+
+  <line x1="170" y1="240" x2="170" y2="320" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arr)"/>
+  <line x1="410" y1="240" x2="410" y2="320" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arr)"/>
+  <line x1="650" y1="240" x2="650" y2="320" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <text x="150" y="300" class="note">共享</text>
+  <text x="390" y="300" class="note">共享</text>
+  <text x="650" y="300" class="note">独占</text>
+
+  <!-- === Layer 2: Policies === -->
+  <text x="55" y="345" class="layerLabel">Layer 2: Trainable Policies（unique policies）</text>
+
+  <rect x="100" y="365" width="500" height="75" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="2.5" filter="url(#sh2)"/>
+  <text x="350" y="395" text-anchor="middle" class="boxTitle">Policy: policy_1</text>
+  <text x="350" y="418" text-anchor="middle" class="boxText">agent_1 和 agent_2 共享此 policy · 两个 roles 的 training data 汇聚于此</text>
+
+  <rect x="650" y="365" width="180" height="75" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="2.5" filter="url(#sh2)"/>
+  <text x="740" y="395" text-anchor="middle" class="boxTitle">Policy: policy_2</text>
+  <text x="740" y="418" text-anchor="middle" class="boxText">仅 agent_3 使用</text>
+
+  <!-- Trainer arrows -->
+  <text x="55" y="470" class="layerLabel">unique(policy) → RayPPOTrainer</text>
+
+  <line x1="350" y1="440" x2="350" y2="505" stroke="#d97706" stroke-width="2.5" marker-end="url(#arr)"/>
+  <line x1="740" y1="440" x2="740" y2="505" stroke="#d97706" stroke-width="2.5" marker-end="url(#arr)"/>
+
+  <!-- === Layer 3: Trainers === -->
+  <text x="55" y="530" class="layerLabel">Layer 3: Per-Policy RayPPOTrainers</text>
+
+  <rect x="160" y="550" width="380" height="55" rx="10" fill="#fefce8" stroke="#ca8a04" stroke-width="2" filter="url(#sh2)"/>
+  <text x="350" y="575" text-anchor="middle" class="boxTitle">RayPPOTrainer(policy_1)</text>
+  <text x="350" y="595" text-anchor="middle" class="boxText">worker group · rollout server · tokenizer · optimizer state</text>
+
+  <rect x="600" y="550" width="230" height="55" rx="10" fill="#fefce8" stroke="#ca8a04" stroke-width="2" filter="url(#sh2)"/>
+  <text x="715" y="575" text-anchor="middle" class="boxTitle">RayPPOTrainer(policy_2)</text>
+  <text x="715" y="595" text-anchor="middle" class="boxText">独立的 worker group</text>
+
+  <!-- Resource pool arrows -->
+  <line x1="350" y1="605" x2="180" y2="655" stroke="#64748b" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="715" y1="605" x2="830" y2="655" stroke="#64748b" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- === Layer 4: Resource Pools === -->
+  <text x="55" y="640" class="layerLabel">Layer 4: Ray Resource Pools（GPU 资源隔离）</text>
+
+  <rect x="60" y="655" width="260" height="40" rx="8" fill="#f0fdfa" stroke="#0f766e" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="190" y="680" text-anchor="middle" class="boxTitle">ray_resource_pool_1</text>
+
+  <rect x="730" y="655" width="240" height="40" rx="8" fill="#f0fdfa" stroke="#0f766e" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="850" y="680" text-anchor="middle" class="boxTitle">ray_resource_pool_2</text>
+
+  <!-- ======== 右侧：策略对比表 ======== -->
+  <rect x="870" y="85" width="380" height="620" rx="12" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" filter="url(#sh)"/>
+  <text x="895" y="115" class="sectionTitle">三种映射策略</text>
+
+  <!-- One-to-One -->
+  <rect x="890" y="140" width="340" height="140" rx="8" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+  <text x="910" y="168" class="boxTitle">Strategy 1: One-to-One</text>
+  <text x="910" y="192" class="boxText">每个 role 独立 policy</text>
+  <text x="910" y="215" class="boxCode">agent_1 → policy_1 → trainer_1</text>
+  <text x="910" y="235" class="boxCode">agent_2 → policy_2 → trainer_2</text>
+  <text x="910" y="255" class="boxCode">agent_3 → policy_3 → trainer_3</text>
+  <text x="910" y="273" class="note">适用：roles 任务差异大，需独立优化</text>
+
+  <!-- All-Shared -->
+  <rect x="890" y="295" width="340" height="120" rx="8" fill="#ecfdf5" stroke="#6ee7b7" stroke-width="1.5"/>
+  <text x="910" y="323" class="boxTitle">Strategy 2: All-Shared</text>
+  <text x="910" y="347" class="boxText">所有 roles 共享一个 policy</text>
+  <text x="910" y="370" class="boxCode">agent_1, agent_2, agent_3 → policy_1 → trainer_1</text>
+  <text x="910" y="390" class="boxCode">1 unique policy → 1 trainer</text>
+  <text x="910" y="408" class="note">适用：roles 同质化 · 等同于单智能体训练</text>
+
+  <!-- Mixed -->
+  <rect x="890" y="430" width="340" height="140" rx="8" fill="#fefce8" stroke="#fcd34d" stroke-width="1.5"/>
+  <text x="910" y="458" class="boxTitle">Strategy 3: Mixed ★（本设计示例）</text>
+  <text x="910" y="482" class="boxText">部分 roles 共享，部分独立</text>
+  <text x="910" y="505" class="boxCode">agent_1, agent_2 → policy_1 (共享)</text>
+  <text x="910" y="525" class="boxCode">agent_3 → policy_2 (独立)</text>
+  <text x="910" y="545" class="boxCode">3 roles → 2 unique policies → 2 trainers</text>
+  <text x="910" y="563" class="note">适用：大规模 planner + 小型 worker</text>
+
+  <!-- 通用公式 -->
+  <rect x="890" y="590" width="340" height="100" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.2"/>
+  <text x="910" y="618" class="boxTitle">通用公式</text>
+  <text x="910" y="645" class="boxCode">m roles  →  n unique policies  →  n trainers</text>
+  <text x="910" y="668" class="boxCode">n ≤ m</text>
+  <text x="910" y="688" class="note">n = 1 → All-Shared（= 单智能体特例）</text>
+  <text x="910" y="703" class="note">n = m → One-to-One</text>
+
+</svg>
