@@ -39,7 +39,6 @@ from verl.workers.rollout.utils import run_uvicorn
 
 
 _DEFAULT_ALLOWED_REQUEST_SAMPLING_PARAM_KEYS = frozenset({
-    "temperature",
     "top_p",
     "top_k",
     "max_tokens",
@@ -256,6 +255,7 @@ def _copy_trajectory_buffer(buffer: TrajectoryBuffer | None) -> TrajectoryBuffer
         response_ids=list(buffer.response_ids),
         response_mask=list(buffer.response_mask),
         response_logprobs=list(buffer.response_logprobs),
+        extra_fields=dict(buffer.extra_fields),
     )
 
 
@@ -441,6 +441,7 @@ class _GatewayActor:
             reward_info={},
             num_turns=_count_chat_turns(session.message_history),
             multi_modal_data=_build_multi_modal_trajectory_data(session.image_data, session.video_data),
+            extra_fields=dict(active.extra_fields),
         )
 
     async def _default_vision_info_extractor(
@@ -820,6 +821,15 @@ class _GatewayActor:
             active_trajectory.response_mask.extend([1] * len(response_ids))
             if output.log_probs is not None:
                 active_trajectory.response_logprobs.extend(list(output.log_probs))
+            # Match native ToolAgentLoop semantics: initialize all metadata from the first turn.
+            output_extra_fields = getattr(output, "extra_fields", {}) or {}
+            if not active_trajectory.extra_fields:
+                active_trajectory.extra_fields.update(output_extra_fields)
+            else:
+                # Multi-round calls, only update the maximum max_global_steps.
+                max_global_steps = output_extra_fields.get("max_global_steps", None)
+                if max_global_steps:
+                    active_trajectory.extra_fields["max_global_steps"] = max_global_steps
 
             assistant_msg, finish_reason = await self._decode_response(
                 response_ids,

@@ -118,7 +118,9 @@ def test_multi_agent_blackbox_yaml_exposes_framework_and_policy_mapping():
     af_cfg = cfg["actor_rollout_ref"]["rollout"]["custom"]["agent_framework"]
 
     assert list(cfg)[-1] == "policies"
-    assert af_cfg["framework_class_fqn"] == "uni_agent.trainer.framework.framework.MultiAgentFramework"
+    assert af_cfg["framework_class_fqn"] == (
+        "examples.multi_agent_blackbox.framework.RemoteMultiAgentFramework"
+    )
     assert af_cfg["multi_agent_runner_fqn"] == "examples.multi_agent_blackbox.multi_agent_runner.multi_agent_runner"
     assert af_cfg["role_policy_mapping"] == {
         "agent_1": "policy_1",

@@ -31,7 +31,7 @@ class PolicyRoutingLLMClient:
         policy_name: str | None = None,
         **kwargs: Any,
     ) -> Any:
-        for metadata_key in ("role", "rollout_id", "role_session_id", "agent_role"):
+        for metadata_key in ("role", "rollout_id", "role_session_id"):
             kwargs.pop(metadata_key, None)
         if policy_name is None:
             if len(self.policy_clients) != 1:

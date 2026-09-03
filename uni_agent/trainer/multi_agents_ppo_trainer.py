@@ -197,8 +197,10 @@ class MultiAgentsPPOTrainer:
             policy_tokenizers[policy_name] = tokenizer
             processor = getattr(trainer, "processor", None)
             policy_processors[policy_name] = processor
-            tool_parser_name = self.policy_configs[policy_name].get(
-                "actor_rollout_ref.rollout.multi_turn.format"
+            tool_parser_name = OmegaConf.select(
+                self.policy_configs[policy_name],
+                "actor_rollout_ref.rollout.multi_turn.format",
+                default=None,
             )
             if tool_parser_name:
                 policy_tool_parser_names[policy_name] = str(tool_parser_name)
@@ -1214,14 +1216,32 @@ class MultiAgentsPPOTrainer:
     def cleanup(self) -> None:
         """Release Ray resources held by this trainer and its agent framework.
 
-        Each step is best-effort and isolated so one failure cannot block the
-        others:
+        Framework shutdown is a prerequisite because active rollouts still
+        access policy and Gateway resources. Later cleanup steps are
+        best-effort and isolated from one another:
 
-        1. per-policy v1 trainer cleanup (no-op with current verl, kept for
+        1. stop framework background rollouts and remote MAS tasks;
+        2. per-policy v1 trainer cleanup (no-op with current verl, kept for
            forward compatibility);
-        2. remove per-policy placement groups (frees vLLM/worker GPU actors);
-        3. shut down gateway actors owned by the agent framework runtime.
+        3. remove per-policy placement groups (frees vLLM/worker GPU actors);
+        4. shut down gateway actors owned by the agent framework runtime.
         """
+        framework = (
+            getattr(self.agent_loop_manager, "framework", None)
+            if self.agent_loop_manager is not None
+            else None
+        )
+        shutdown_framework = getattr(framework, "shutdown", None)
+        if callable(shutdown_framework):
+            try:
+                shutdown_framework()
+            except Exception as exc:
+                logger.warning("multi-agent framework shutdown failed: %s", exc)
+                # Active rollout tasks may still access policies and Gateway.
+                # Preserve those resources and surface the failure so callers
+                # do not treat a partial cleanup as successful.
+                raise
+
         for trainer in self.policy_trainers.values():
             cleanup = getattr(trainer, "cleanup", None)
             if callable(cleanup):

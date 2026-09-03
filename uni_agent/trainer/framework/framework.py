@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import logging
 import random
 import threading
+import time
 from abc import ABC, abstractmethod
 from dataclasses import replace
 from functools import partial
@@ -696,6 +698,7 @@ class MultiAgentFramework(AgentFramework):
         self._bg_loop: asyncio.AbstractEventLoop | None = None
         self._bg_thread: "threading.Thread | None" = None
         self._bg_tasks: set = set()
+        self._bg_drain_future: concurrent.futures.Future | None = None
 
     @staticmethod
     def _scalar(value):
@@ -1027,18 +1030,23 @@ class MultiAgentFramework(AgentFramework):
     ):
         """Run one external MAS rollout and return finalized Gateway trajectories."""
         rollout_id = rollout_id or f"multi-agent-rollout-{sample_index}-{uuid4().hex}"
-        rollout = await self.session_runtime.create_multi_agent_rollout(
-            rollout_id,
-            role_policy_mapping=self.role_policy_mapping,
+        rollout = None
+        create_task = asyncio.create_task(
+            self.session_runtime.create_multi_agent_rollout(
+                rollout_id,
+                role_policy_mapping=self.role_policy_mapping,
+            )
         )
         try:
-            runner_result = await self.multi_agent_runner(
+            # Shield the Gateway RPC so cancellation cannot leave a remotely
+            # created rollout without first recovering its manager mapping.
+            rollout = await asyncio.shield(create_task)
+            runner_result = await self._execute_multi_agent_runner(
                 raw_prompt=raw_prompt,
                 rollout=rollout,
+                rollout_id=rollout_id,
                 sample_index=sample_index,
-                session_runtime=self.session_runtime,
-                role_policy_mapping=self.role_policy_mapping,
-                **(runner_kwargs or {}),
+                runner_kwargs=runner_kwargs,
             )
             reward_info = None
             if isinstance(runner_result, dict):
@@ -1051,10 +1059,44 @@ class MultiAgentFramework(AgentFramework):
                     timeout=self.completion_timeout,
                 )
             return await self.session_runtime.finalize_multi_agent_rollout(rollout_id)
+        except asyncio.CancelledError:
+            if rollout is None and not create_task.cancelled():
+                try:
+                    rollout = await create_task
+                except Exception:
+                    logger.warning(
+                        "Gateway rollout creation failed while cancellation was being handled: %s",
+                        rollout_id,
+                        exc_info=True,
+                    )
+            if rollout is not None:
+                await self.session_runtime.abort_multi_agent_rollout(rollout_id)
+            raise
         except Exception:
-            await self.session_runtime.abort_multi_agent_rollout(rollout_id)
+            if rollout is not None:
+                await self.session_runtime.abort_multi_agent_rollout(rollout_id)
             raise
 
+    async def _execute_multi_agent_runner(
+        self,
+        *,
+        raw_prompt,
+        rollout,
+        rollout_id: str,
+        sample_index: int,
+        runner_kwargs: dict[str, object] | None,
+    ):
+        """Execute the configured runner; recipes may override the process boundary."""
+        del rollout_id
+        return await self.multi_agent_runner(
+            raw_prompt=raw_prompt,
+            rollout=rollout,
+            sample_index=sample_index,
+            session_runtime=self.session_runtime,
+            role_policy_mapping=self.role_policy_mapping,
+            **(runner_kwargs or {}),
+        )
+        
     async def _annotate_rollout_trajectories(
         self,
         *,
@@ -1089,8 +1131,6 @@ class MultiAgentFramework(AgentFramework):
             role = extra_fields.get("role")
             if role_session_id is not None:
                 extra_fields["role_session_id"] = role_session_id
-            if role is not None:
-                extra_fields.setdefault("agent_role", role)
             extra_fields.setdefault("rollout_id", rollout_result.rollout_id)
             extra_fields["sample_idx"] = sample_idx
             extra_fields["record_idx"] = record_idx
@@ -1188,20 +1228,18 @@ class MultiAgentFramework(AgentFramework):
         for key in ("uid", "raw_prompt", "data_source", "reward_model", "extra_info", "tools_kwargs", "agent_name"):
             if key in sample_fields:
                 field[key] = sample_fields[key]
-        field["session_id"] = sample_idx
         field["global_steps"] = global_steps
         field["num_turns"] = torch.tensor(int(trajectory.num_turns), dtype=torch.long)
         field["rollout_id"] = rollout_id
         field["sample_idx"] = sample_idx
         field["record_idx"] = record_idx
-        field.setdefault("agent_role", field.get("role"))
 
         prompt_len = prompts.size(0)
         response_len = responses.size(0)
         tag = {
             "global_steps": global_steps,
-            "min_global_steps": global_steps,
-            "max_global_steps": global_steps,
+            "min_global_steps": trajectory.extra_fields.get("min_global_steps"),
+            "max_global_steps": trajectory.extra_fields.get("max_global_steps"),
             "status": "success",
             "prompt_len": prompt_len,
             "response_len": response_len,
@@ -1253,3 +1291,55 @@ class MultiAgentFramework(AgentFramework):
             tags=tags,
             partition_id=partition_id,
         )
+
+    def shutdown(self, timeout: float = 30.0) -> None:
+        """Cancel background work, let coroutine cleanup finish, and close its loop."""
+        loop = self._bg_loop
+        if loop is None:
+            return
+        deadline = time.monotonic() + max(0.0, timeout)
+
+        if threading.current_thread() is self._bg_thread:
+            raise RuntimeError("MultiAgentFramework.shutdown() cannot run on its background thread")
+
+        for background_future in list(self._bg_tasks):
+            background_future.cancel()
+
+        async def drain_cancelled_tasks() -> None:
+            current_task = asyncio.current_task()
+            pending_tasks = [
+                task
+                for task in asyncio.all_tasks()
+                if task is not current_task and not task.done()
+            ]
+            if pending_tasks:
+                await asyncio.gather(*pending_tasks, return_exceptions=True)
+
+        if loop.is_running():
+            drain_future = getattr(self, "_bg_drain_future", None)
+            if drain_future is None or drain_future.done():
+                drain_future = asyncio.run_coroutine_threadsafe(drain_cancelled_tasks(), loop)
+                self._bg_drain_future = drain_future
+            try:
+                drain_future.result(timeout=max(0.0, deadline - time.monotonic()))
+            except concurrent.futures.TimeoutError as exc:
+                raise TimeoutError(
+                    "timed out draining multi-agent framework background tasks"
+                ) from exc
+            except Exception as exc:
+                raise RuntimeError(
+                    "failed to drain multi-agent framework background tasks"
+                ) from exc
+            loop.call_soon_threadsafe(loop.stop)
+
+        if self._bg_thread is not None:
+            self._bg_thread.join(timeout=max(0.0, deadline - time.monotonic()))
+            if self._bg_thread.is_alive():
+                raise TimeoutError("timed out stopping multi-agent framework background thread")
+
+        if not loop.is_closed():
+            loop.close()
+        self._bg_tasks.clear()
+        self._bg_drain_future = None
+        self._bg_loop = None
+        self._bg_thread = None

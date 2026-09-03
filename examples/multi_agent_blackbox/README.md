@@ -3,8 +3,11 @@
 This example shows the minimal Uni-Agent wiring for multi-agent blackbox RL
 training.
 
-- `multi_agent_runner.py` is the external MAS entry point called by
-  `MultiAgentFramework`.
+- `framework.py` provides the example-specific `RemoteMultiAgentFramework`.
+- `remote_runner.py` executes each MAS rollout runner as an independent Ray
+  remote task.
+- `multi_agent_runner.py` is the external MAS entry point loaded inside that
+  remote task.
 - `config/mas_config.yaml` defines abstract MAS roles such as `agent_1`,
   `agent_2`, and `agent_3`.
 - `config/multi_agent_blackbox.yaml` maps roles to trainable policies. Each
@@ -20,6 +23,29 @@ runner returns rollout-level `final_result` and `agent_outputs`; before
 RewardLoopWorker scoring, `MultiAgentFramework` injects them into `extra_info`.
 Production runs should replace `examples.multi_agent_blackbox.reward` with a
 task evaluator, rule checker, or judge model that scores the final MAS result.
+
+## Remote MAS Rollout Execution
+
+The example config selects
+`examples.multi_agent_blackbox.framework.RemoteMultiAgentFramework`. For every
+prompt sample and rollout index, the parent framework first creates the Gateway
+rollout and then submits one `remote_multi_agent_run` Ray task. The task receives
+only serializable prompt, rollout-handle, role mapping, and runner arguments;
+the live Gateway runtime and TransferQueue remain owned by the parent framework.
+The remote `session_runtime` argument is only a compatibility stub for
+capturing `complete_session`/`complete_multi_agent_rollout` reward metadata. A
+runner must use `rollout.base_url` for model requests and must not depend on
+live create, wait, finalize, or abort methods from the parent Gateway runtime.
+
+After the Ray task returns, the parent completes and finalizes the Gateway
+rollout, annotates its trajectories, and writes them to TransferQueue. A task
+failure or cancellation causes the parent to abort the Gateway rollout. During
+a successful trainer cleanup, outstanding Ray tasks reach a terminal state
+before Gateway actors and policy resources are released; a cleanup timeout
+preserves those resources and surfaces an error to the training entrypoint.
+The Ray task reserves zero CPUs
+by default, matching the SWE blackbox example; `max_concurrent_rollouts`
+remains the limit on simultaneously submitted MAS rollouts.
 
 ## Ray Placement-Group Name Collision (verl is not modified)
 

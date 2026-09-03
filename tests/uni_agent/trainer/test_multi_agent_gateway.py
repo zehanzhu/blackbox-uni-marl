@@ -68,8 +68,15 @@ class RecordingBackend:
                 "kwargs": dict(kwargs),
             }
         )
-        text, stop_reason = self.outputs.pop(0)
-        return SimpleNamespace(token_ids=list(text.encode("utf-8")), log_probs=None, stop_reason=stop_reason)
+        output = self.outputs.pop(0)
+        text, stop_reason = output[:2]
+        extra_fields = output[2] if len(output) > 2 else {}
+        return SimpleNamespace(
+            token_ids=list(text.encode("utf-8")),
+            log_probs=None,
+            stop_reason=stop_reason,
+            extra_fields=dict(extra_fields),
+        )
 
 
 def _install_dependency_stubs():
@@ -116,6 +123,7 @@ def _install_dependency_stubs():
         )
         chat_template_mod.initialize_system_prompt = lambda tokenizer, **kwargs: None
         tokenizer_mod = types.ModuleType("verl.utils.tokenizer")
+        tokenizer_mod.__path__ = []
         tokenizer_mod.normalize_token_ids = lambda ids: list(ids)
         tool_registry_mod = types.ModuleType("verl.tools.tool_registry")
         tool_registry_mod.initialize_tools_from_config = lambda path: []
@@ -145,6 +153,7 @@ def _install_dependency_stubs():
         sys.modules["verl.experimental.agent_loop.tool_parser"] = tool_parser_mod
         sys.modules["verl.utils.chat_template"] = chat_template_mod
         sys.modules["verl.utils.tokenizer"] = tokenizer_mod
+        sys.modules["verl.utils.tokenizer.chat_template"] = chat_template_mod
         sys.modules["verl.tools.tool_registry"] = tool_registry_mod
         sys.modules["verl.utils.import_utils"] = import_utils_mod
         sys.modules["verl.utils.transferqueue_utils"] = transferqueue_utils_mod
@@ -312,6 +321,7 @@ class TestPolicyRoutingLLMClient:
             policy_name="policy_2",
             role="agent_3",
             rollout_id="rollout-1",
+            agent_role="legacy-agent-role",
             priority=7,
         )
 
@@ -324,6 +334,7 @@ class TestPolicyRoutingLLMClient:
                 "sampling_params": {"max_tokens": 4},
                 "image_data": None,
                 "video_data": None,
+                "agent_role": "legacy-agent-role",
                 "priority": 7,
             }
         ]
@@ -614,6 +625,9 @@ class TestMultiAgentFrameworkTQ:
                 "role": "agent_1",
                 "policy_name": "policy_1",
                 "role_session_id": "rollout-1:agent_1",
+                "global_steps": 10,
+                "min_global_steps": 8,
+                "max_global_steps": 10,
             },
         )
 
@@ -628,13 +642,13 @@ class TestMultiAgentFrameworkTQ:
         )
 
         assert field["uid"] == "prompt-uid"
-        assert field["session_id"] == 2
+        assert "session_id" not in field
         assert "prompt_group_id" not in field
         assert field["rollout_id"] == "rollout-1"
         assert field["sample_idx"] == 2
         assert field["record_idx"] == 3
         assert field["role"] == "agent_1"
-        assert field["agent_role"] == "agent_1"
+        assert "agent_role" not in field
         assert field["policy_name"] == "policy_1"
         assert field["role_session_id"] == "rollout-1:agent_1"
         assert field["rm_scores"][-1].item() == 0.5
@@ -646,8 +660,9 @@ class TestMultiAgentFrameworkTQ:
         assert tag["record_idx"] == 3
         assert tag["role"] == "agent_1"
         assert tag["policy_name"] == "policy_1"
-        assert tag["min_global_steps"] == 9
-        assert tag["max_global_steps"] == 9
+        assert tag["global_steps"] == 9
+        assert tag["min_global_steps"] == 8
+        assert tag["max_global_steps"] == 10
 
     def test_multi_agent_reward_worker_receives_rollout_result_extra_info(self):
         asyncio.run(self._run_multi_agent_reward_worker_receives_rollout_result_extra_info())
@@ -844,13 +859,13 @@ class TestMultiAgentFrameworkTQ:
         first_field = recorded_tq.batch_puts[0]["fields"][0]
         second_field = recorded_tq.batch_puts[0]["fields"][1]
         assert first_field["uid"] == "prompt-uid"
-        assert first_field["session_id"] == 0
+        assert "session_id" not in first_field
         assert "prompt_group_id" not in first_field
         assert first_field["sample_idx"] == 0
         assert first_field["record_idx"] == 0
         assert first_field["rollout_id"] == runtime.created[0]["rollout_id"]
         assert first_field["role"] == "agent_1"
-        assert first_field["agent_role"] == "agent_1"
+        assert "agent_role" not in first_field
         assert first_field["role_session_id"] == f"{runtime.created[0]['rollout_id']}:agent_1"
         assert first_field["policy_name"] == "policy_1"
         assert first_field["rm_scores"][-1].item() == 0.75
@@ -975,12 +990,12 @@ class TestMultiAgentFrameworkTQ:
             strict=True,
         ):
             assert field["uid"] == "prompt-uid"
-            assert field["session_id"] == sample_idx
+            assert "session_id" not in field
             assert field["rollout_id"] == rollout_id
             assert field["sample_idx"] == sample_idx
             assert field["record_idx"] == record_idx
             assert field["role"] == role
-            assert field["agent_role"] == role
+            assert "agent_role" not in field
             assert field["role_session_id"] == f"{rollout_id}:{role}"
             assert field["policy_name"] == policy_name
             assert field["rm_scores"][-1].item() == 0.5
@@ -1143,7 +1158,12 @@ class TestBuildSamplingParams:
     async def _run_rollout(self):
         import httpx
 
-        backend = RecordingBackend([("from agent 1", "completed"), ("from agent 3", "completed")])
+        backend = RecordingBackend(
+            [
+                ("from agent 1", "completed", {"global_steps": 10, "min_global_steps": 9, "max_global_steps": 10}),
+                ("from agent 3", "completed", {"global_steps": 8, "min_global_steps": 8, "max_global_steps": 8}),
+            ]
+        )
         actor = _make_gateway(backend)
         handle = await actor.create_multi_agent_rollout(
             "rollout-1",
@@ -1201,11 +1221,61 @@ class TestBuildSamplingParams:
         by_role = {trajectory.extra_fields["role"]: trajectory for trajectory in result.trajectories}
         assert by_role["agent_1"].extra_fields["policy_name"] == "policy_1"
         assert by_role["agent_1"].extra_fields["rollout_id"] == "rollout-1"
+        assert by_role["agent_1"].extra_fields["min_global_steps"] == 9
+        assert by_role["agent_1"].extra_fields["max_global_steps"] == 10
         assert by_role["agent_1"].reward_info["reward_score"] == 1.0
         assert by_role["agent_3"].extra_fields["policy_name"] == "policy_2"
+        assert by_role["agent_3"].extra_fields["min_global_steps"] == 8
+        assert by_role["agent_3"].extra_fields["max_global_steps"] == 8
 
     def test_rollout_uses_policy_specific_tokenizer(self):
         asyncio.run(self._run_rollout_uses_policy_specific_tokenizer())
+
+    def test_rollout_accumulates_version_range_across_multi_turn_generation(self):
+        asyncio.run(self._run_rollout_accumulates_version_range_across_multi_turn_generation())
+
+    async def _run_rollout_accumulates_version_range_across_multi_turn_generation(self):
+        import httpx
+
+        backend = RecordingBackend(
+            [
+                ("first", "completed", {"global_steps": 8, "min_global_steps": 7, "max_global_steps": 8}),
+                ("second", "completed", {"global_steps": 10, "min_global_steps": 9, "max_global_steps": 10}),
+            ]
+        )
+        actor = _make_gateway(backend)
+        actor._system_prompt = []
+        await actor.create_session("session-1")
+
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=actor._app),
+            base_url="http://testserver",
+        ) as client:
+            first = await client.post(
+                "/sessions/session-1/v1/chat/completions",
+                json={
+                    "messages": [{"role": "user", "content": "first question"}],
+                    "max_tokens": 16,
+                },
+            )
+            second = await client.post(
+                "/sessions/session-1/v1/chat/completions",
+                json={
+                    "messages": [
+                        {"role": "user", "content": "first question"},
+                        {"role": "assistant", "content": "first"},
+                        {"role": "user", "content": "follow-up"},
+                    ],
+                    "max_tokens": 16,
+                },
+            )
+
+        assert first.status_code == 200
+        assert second.status_code == 200
+        trajectories = await actor.finalize_session("session-1")
+        assert len(trajectories) == 1
+        assert trajectories[0].extra_fields["min_global_steps"] == 7
+        assert trajectories[0].extra_fields["max_global_steps"] == 10
 
     async def _run_rollout_uses_policy_specific_tokenizer(self):
         import httpx

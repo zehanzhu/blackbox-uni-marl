@@ -76,8 +76,8 @@ cd "${REPO_ROOT}"
 export RAY_ADDRESS
 export NCCL_P2P_DISABLE="${NCCL_P2P_DISABLE:-1}"
 export NCCL_SHM_DISABLE="${NCCL_SHM_DISABLE:-1}"
-export NCCL_DEBUG="${NCCL_DEBUG:-INFO}"  
-export HYDRA_FULL_ERROR="${HYDRA_FULL_ERROR:-1}"   
+export NCCL_DEBUG="${NCCL_DEBUG:-INFO}"   # 定位 hang 需要 INFO；正式跑可改 WARN/ERROR
+export HYDRA_FULL_ERROR="${HYDRA_FULL_ERROR:-1}"   # hydra 打印完整异常栈
 
 # ── 模型路径校验 ─────────────────────────────────────────────
 for var in POLICY_1_MODEL_PATH POLICY_2_MODEL_PATH; do

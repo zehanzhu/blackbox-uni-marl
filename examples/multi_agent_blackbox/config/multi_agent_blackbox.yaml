@@ -135,7 +135,7 @@ actor_rollout_ref:
     custom:
       agent_framework:
         # Framework implementation driving the external multi-agent blackbox.
-        framework_class_fqn: uni_agent.trainer.framework.framework.MultiAgentFramework
+        framework_class_fqn: examples.multi_agent_blackbox.framework.RemoteMultiAgentFramework
         # Blackbox MAS client run once per prompt/rollout (role-gateway calls).
         multi_agent_runner_fqn: examples.multi_agent_blackbox.multi_agent_runner.multi_agent_runner
         # Number of gateway actors serving the LLM sessions.

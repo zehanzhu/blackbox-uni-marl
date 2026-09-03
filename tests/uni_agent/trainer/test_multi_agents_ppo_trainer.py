@@ -990,26 +990,25 @@ class TestMultiAgentsPPOTrainer:
     def test_gateway_actor_kwargs_include_per_policy_tool_parser_names(self):
         _install_dependency_stubs()
 
+        from omegaconf import OmegaConf
+
         from uni_agent.trainer.multi_agents_ppo_trainer import MultiAgentsPPOTrainer
 
-        trainer = _make_trainer(
-            MultiAgentsPPOTrainer,
-            policy_configs={
-                "policy_1": _policy_config(
-                    "policy_1",
-                    actor_rollout_ref=SimpleNamespace(
-                        rollout=SimpleNamespace(multi_turn=SimpleNamespace(format="qwen3_coder"))
-                    ),
-                ),
-                "policy_2": _policy_config(
-                    "policy_2",
-                    actor_rollout_ref=SimpleNamespace(
-                        rollout=SimpleNamespace(multi_turn=SimpleNamespace(format="hermes"))
-                    ),
-                ),
-                "policy_3": _policy_config("policy_3"),
-            },
-        )
+        trainer = object.__new__(MultiAgentsPPOTrainer)
+        trainer.policy_configs = {
+            "policy_1": OmegaConf.create(
+                {"actor_rollout_ref": {"rollout": {"multi_turn": {"format": "qwen3_coder"}}}}
+            ),
+            "policy_2": OmegaConf.create(
+                {"actor_rollout_ref": {"rollout": {"multi_turn": {"format": "hermes"}}}}
+            ),
+            "policy_3": OmegaConf.create({}),
+        }
+        trainer.policy_trainers = {
+            "policy_1": SimpleNamespace(tokenizer="tokenizer:policy_1", processor=None),
+            "policy_2": SimpleNamespace(tokenizer="tokenizer:policy_2", processor=None),
+            "policy_3": SimpleNamespace(tokenizer="tokenizer:policy_3", processor=None),
+        }
 
         gateway_actor_kwargs = trainer.get_gateway_actor_kwargs()
 

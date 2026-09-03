@@ -61,6 +61,7 @@ class TrajectoryBuffer:
     response_ids: list[int] = field(default_factory=list)
     response_mask: list[int] = field(default_factory=list)
     response_logprobs: list[float] = field(default_factory=list)
+    extra_fields: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
