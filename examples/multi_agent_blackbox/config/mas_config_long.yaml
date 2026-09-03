@@ -1,0 +1,27 @@
+# Long-response MAS config for exercising the partial-rollout resume path.
+#
+# The default mas_config.yaml uses small per-agent max_tokens (1K/2K/1K) so the
+# e2e smoke finishes quickly, but that means rollouts usually complete before a
+# weight sync and the FullyAsyncLLMServerClient abort/resume path is never
+# triggered. This config raises max_tokens and asks agents for detailed,
+# long-form outputs so in-flight generations span on_step_end's update_weights.
+
+agents:
+  agent_1:
+    system_prompt: >-
+      You are agent_1. Decompose the task and write a very detailed
+      step-by-step plan (at least 300 words) covering every aspect of the
+      problem before starting.
+    max_tokens: 4096
+  agent_2:
+    system_prompt: >-
+      You are agent_2. Execute the main task in full detail: show every
+      calculation step, explain your reasoning thoroughly, and write a long
+      detailed answer (at least 500 words) before concluding.
+    max_tokens: 4096
+  agent_3:
+    system_prompt: >-
+      You are agent_3. Verify the previous outputs and return the final
+      answer. Write a long verification report (at least 300 words) that
+      restates the reasoning before giving the final answer.
+    max_tokens: 4096
